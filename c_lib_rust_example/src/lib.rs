@@ -1,6 +1,6 @@
-use libc;
 use std::ffi::CString;
 use std::os::raw::c_char;
+
 
 /// File: lib.rs
 
@@ -8,6 +8,7 @@ use std::os::raw::c_char;
 /// #[no_mangle] - // https://internals.rust-lang.org/t/precise-semantics-of-no-mangle/4098
 
 #[no_mangle]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn get_some_cstr(desc: *mut *mut c_char) -> isize {
     // We want the pointer coming in to not be null and not currently be pointing to something
     // to prevent whatever it's pointing to be lost.
@@ -23,7 +24,7 @@ pub unsafe extern "C" fn get_some_cstr(desc: *mut *mut c_char) -> isize {
     // that the memory is allocated with the same allocator as what the caller will be using to
     // "free" it.  In general having a library which allocates things on the heap and expects the
     // caller to free it is probably not the best thing to do.
-    let m = libc::malloc(libc::strlen(val.as_ptr()) + 1) as *mut c_char;
+    let m = libc::malloc(val.as_bytes().len() + 1) as *mut c_char;
     if m.is_null() {
         return libc::ENOMEM as isize;
     }
@@ -34,6 +35,7 @@ pub unsafe extern "C" fn get_some_cstr(desc: *mut *mut c_char) -> isize {
 }
 
 #[no_mangle]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn get_some_cstr_2(desc: *mut *mut c_char) -> isize {
     // We want the pointer coming in to not be null and not currently be pointing to something
     // to prevent whatever it's pointing to be lost.
@@ -81,6 +83,7 @@ impl Drop for Error {
 }
 
 #[no_mangle]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn error_create_with_result(_e: *mut *mut Error) -> isize {
     let e = Box::new(example_error());
     *_e = Box::into_raw(e);
@@ -88,6 +91,7 @@ pub unsafe extern "C" fn error_create_with_result(_e: *mut *mut Error) -> isize 
 }
 
 #[no_mangle]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn error_free_with_result(e: *mut *mut Error) -> i32 {
     if e.is_null() || (*e).is_null() {
         return libc::EINVAL;
@@ -100,7 +104,7 @@ pub unsafe extern "C" fn error_free_with_result(e: *mut *mut Error) -> i32 {
 
     // Reconstruct the Error into a box and then drop it so that it's freed.
     drop(Box::from_raw(*e));
-    *e = 0 as *mut Error;
+    *e = std::ptr::null_mut::<Error>();
     0
 }
 
@@ -120,6 +124,7 @@ pub extern "C" fn error_free(_: Option<Box<Error>>) {}
 /// returned is only valid as long as the Error has not been freed.  If C
 /// caller needs a longer lifetime they need to copy the value.
 #[no_mangle]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe extern "C" fn error_msg_get(e: &Error) -> *const c_char {
     e.msg.as_ptr()
 }
